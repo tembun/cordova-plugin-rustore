@@ -1,0 +1,31 @@
+{
+	"name": "cordova-plugin-rustore",
+	"version": "1.0.0",
+	"description": "Cordova plugin for RuStore SDK",
+	"types": "types/index.d.ts",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/tembun/cordova-plugin-rustore.git"
+	},
+	"keywords": [
+		"ecosystem:cordova",
+		"cordova",
+		"cordova-android",
+		"rustore"
+	],
+	"author": "tembun",
+	"engines": {
+		"cordovaDependencies": {
+			"1.0.0": {
+				"cordova": ">=11.0.0",
+				"cordova-android": ">=10.1.1"
+			}
+		}
+	},
+	"cordova": {
+		"id": "cordova-plugin-rustore",
+		"platforms": [
+			"android"
+		]
+	}
+}

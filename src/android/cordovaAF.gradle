@@ -1,0 +1,12 @@
+repositories {
+    maven {
+        url = uri("https://artifactory-external.vkpartner.ru/artifactory/maven-rustore-exposed/")
+    }
+}
+
+dependencies {
+    implementation(platform("ru.rustore.sdk:bom:2026.04.02"))
+    implementation 'ru.rustore.sdk:core'
+    implementation 'ru.rustore.sdk:pay'
+    implementation 'ru.rustore.sdk:review'
+}

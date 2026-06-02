@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:tools="http://schemas.android.com/tools"
+	id="cordova-plugin-rustore" version="1.0.0">
+
+<name>Cordova Plugin for RuStoreSDK</name>
+<description>A Cordova Plugin for RuStore SDK</description>
+<author>tembun</author>
+<keywords>cordova,android,rustore,sdk</keywords>
+<repo>https://github.com/tembun/cordova-plugin-rustore.git</repo>
+
+<engines>
+	<engine name="cordova" version=">=10.0.0"/>
+	<engine name="cordova-android" version=">=9.0.0"/>
+</engines>
+
+<js-module src="www/rustore.js" name="rustore">
+	<clobbers target="window.ruStore"/>
+</js-module>
+
+<platform name="android">
+	<preference name="RUSTORE_APP_ID" />
+
+	<config-file target="res/xml/config.xml" parent="/*">
+		<feature name="RuStorePlugin">
+			<param name="android-package" value="org.apache.cordova.plugin.RuStorePlugin"/>
+		</feature>
+	</config-file>
+
+	<config-file target="AndroidManifest.xml" parent="/manifest">
+		<uses-permission android:name="android.permission.INTERNET" />
+		<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+	</config-file>
+
+	<config-file parent="/manifest/application" target="AndroidManifest.xml">
+		<meta-data android:name="console_app_id_value" android:value="$RUSTORE_APP_ID" />
+	</config-file>
+
+	<source-file src="src/android/RuStorePlugin.kt" target-dir="app/src/main/kotlin/org/apache/cordova/plugin"/>
+
+	<framework src="src/android/cordovaAF.gradle" custom="true" type="gradleReference"/>
+
+</platform>
+</plugin>
