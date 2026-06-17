@@ -11,7 +11,7 @@ enum RuStoreProductType {
 	NON_CONSUMABLE = "NON_CONSUMABLE",
 	SUBSCRIPTION = "SUBSCRIPTION",
 }
-export type RuStoreProductData = {
+type RuStoreProductData = {
 	id: string
 	type: RuStoreProductType
 	amountLabel: string
@@ -21,14 +21,14 @@ export type RuStoreProductData = {
 	description?: string
 	imageUrl: string
 }
-export type RuStoreGetProductsResult = Array<RuStoreProductData>
+type RuStoreGetProductsResult = Array<RuStoreProductData>
 
 enum RuStorePurchaseType {
 	ONE_STEP = "ONE_STEP",
 	TWO_STEP = "TWO_STEP",
 	UNDEFINED = "UNDEFINED",
 }
-export type RuStorePurchaseData = {
+type RuStorePurchaseData = {
 	orderId?: string
 	purchaseId: string
 	productId: string
@@ -38,20 +38,31 @@ export type RuStorePurchaseData = {
 	quantity: number
 	sandbox: boolean
 }
-export type RuStorePurchaseResult = {
+type RuStorePurchaseResult = {
 	purchase: RuStorePurchaseData
+}
+
+enum RuStoreUpdateAvailability {
+	AVAILABLE = "AVAILABLE",
+	UNAVAILABLE = "UNAVAILABLE",
+	IN_PROGRESS = "IN_PROGRESS",
 }
 
 declare class RuStore {
 	checkPurchasesAvailability(): Promise<boolean>
 	getProducts(productIds: Array<string>): Promise<RuStoreGetProductsResult>
 	purchase(productId: string): Promise<WithStatus<RuStorePurchaseResult>>
+	RuStorePurchaseType: typeof RuStorePurchaseType
+	RuStoreProductType: typeof RuStoreProductType
+
 	checkReviewAvailability(): Promise<boolean>
 	requestReview(): Promise<WithStatus>
 
+	checkUpdateAvailability(): Promise<RuStoreUpdateAvailability>
+	installUpdate(): Promise<boolean>
+	RuStoreUpdateAvailability: typeof RuStoreUpdateAvailability
+
 	RuStoreStatus: typeof RuStoreStatus
-	RuStorePurchaseType: typeof RuStorePurchaseType
-	RuStoreProductType: typeof RuStoreProductType
 }
 
 declare global {
@@ -59,3 +70,5 @@ declare global {
 		ruStore: RuStore
 	}
 }
+
+export {}

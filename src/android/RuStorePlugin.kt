@@ -1,10 +1,24 @@
 package org.apache.cordova.plugin
 
-import org.apache.cordova.CordovaPlugin
+import org.apache.cordova.plugin.ui.ProgressDialogController
+
 import org.apache.cordova.CallbackContext
+import org.apache.cordova.CordovaPlugin
 
 import org.json.JSONArray
 import org.json.JSONObject
+
+import android.app.Activity
+import android.os.Handler
+import android.os.Looper
+
+import ru.rustore.sdk.appupdate.manager.RuStoreAppUpdateManager
+import ru.rustore.sdk.appupdate.manager.factory.RuStoreAppUpdateManagerFactory
+import ru.rustore.sdk.appupdate.model.AppUpdateInfo
+import ru.rustore.sdk.appupdate.model.AppUpdateOptions
+import ru.rustore.sdk.appupdate.model.AppUpdateType
+import ru.rustore.sdk.appupdate.model.InstallStatus
+import ru.rustore.sdk.appupdate.model.UpdateAvailability
 
 import ru.rustore.sdk.pay.RuStorePayClient
 import ru.rustore.sdk.pay.model.PreferredPurchaseType
@@ -29,12 +43,19 @@ enum class ReviewStatus {
 	ERROR,
 }
 
+const val BYTES_IN_MB = 1024.0 * 1024.0
+
 class RuStorePlugin : CordovaPlugin() {
 	private lateinit var reviewManager: RuStoreReviewManager
+	private lateinit var updateManager: RuStoreAppUpdateManager
+	private var lastUpdateInfo: AppUpdateInfo? = null
+	private var progressDialog: ProgressDialogController? = null
 
 	override fun pluginInitialize() {
 		super.pluginInitialize()
 		reviewManager = RuStoreReviewManagerFactory.create(cordova.activity)
+		updateManager = RuStoreAppUpdateManagerFactory.create(cordova.activity)
+		progressDialog = ProgressDialogController(cordova.activity)
 	}
 
 	private fun checkPurchasesAvailability(ctx: CallbackContext) {
@@ -102,7 +123,6 @@ class RuStorePlugin : CordovaPlugin() {
 			preferredPurchaseType = PreferredPurchaseType.ONE_STEP,
 		)
 			.addOnSuccessListener { result ->
-				val purchaseId = result.purchaseId
 				result.orderId?.let {
 					purchaseDataJson.put("orderId", it.value)
 				}
@@ -150,7 +170,7 @@ class RuStorePlugin : CordovaPlugin() {
 			.addOnSuccessListener {
 				ctx.success(true)
 			}
-			.addOnFailureListener { throwable ->
+			.addOnFailureListener {
 				ctx.success(false)
 			}
 	}
@@ -177,6 +197,130 @@ class RuStorePlugin : CordovaPlugin() {
 			}
 	}
 
+	private fun checkUpdateAvailability(ctx: CallbackContext) {
+		updateManager.getAppUpdateInfo()
+			.addOnSuccessListener{ updateInfo ->
+				lastUpdateInfo = updateInfo
+				val result = when (updateInfo.updateAvailability) {
+				UpdateAvailability.UNKNOWN,
+				UpdateAvailability.UPDATE_NOT_AVAILABLE -> "UNAVAILABLE"
+				/*
+				 * UPDATE_AVAILABLE and installStatus combinations:
+				 *     DOWNLOADED
+				 *       User has already downloaded the file for update,
+				 *       but cancelled the installation of it. It means
+				 *       that the whole process is still in progress.
+				 *     UNKNOWN
+				 *       The downloading was started, but user stopped it.
+				 *       Treat this as termination of the update process.
+				 */
+				UpdateAvailability.UPDATE_AVAILABLE -> {
+					when (updateInfo.installStatus) {
+					InstallStatus.DOWNLOADED,
+					InstallStatus.INSTALLING -> "IN_PROGRESS"
+					else -> "AVAILABLE"
+					}
+				}
+				UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS -> "IN_PROGRESS"
+				else -> "UNAVAILABLE"
+				}
+				ctx.success(result)
+			}
+			.addOnFailureListener {
+				ctx.success("UPDATE_NOT_AVAILABLE")
+			}
+	}
+
+	private fun installUpdate(ctx: CallbackContext) {
+		updateManager.completeUpdate(AppUpdateOptions.Builder().appUpdateType(AppUpdateType.FLEXIBLE).build())
+			.addOnSuccessListener {
+				ctx.success(true)
+			}
+			.addOnFailureListener {
+				ctx.success(false)
+			}
+	}
+
+	private fun registerUpdateListener(ctx: CallbackContext) {
+		updateManager.registerListener { state ->
+			when (state.installStatus) {
+			InstallStatus.DOWNLOADED -> {
+				/*
+				 * Even though official documentation says that we're
+				 * free to completeUpdate() when we've received DOWNLOADED,
+				 * in practice this is not the case.
+				 * In reality, at the point when we've received DOWNLOADED,
+				 * lastUpdateInfo.installStatus is UNKNOWN. If we would try
+				 * to refresh it via getAppUpdateInfo(), its value would be 4.
+				 * Now, the 4 itself is not documented even in the official
+				 * docs (0-5 except 4 are documented), but I looked into SDK
+				 * files and found that it is INSTALLING. In any case, both
+				 * UNKNOWN and INSTALLING are inappropriate statuses for
+				 * completeUpdate() (it will simply throw an error). It
+				 * doesn't quite make sense, but I believe that a sort of
+				 * race condition happens here.
+				 * The only way I found to work this around is to
+				 * completeUpdate() after a short delay. This works and
+				 * after that delay completeUpdate() does what it should.
+				 * But the value of 1000 is the very minimum that worked
+				 * for me - less than that, and it won't work.
+				 */
+				Handler(Looper.getMainLooper()).postDelayed({
+					progressDialog?.hide()
+					installUpdate(ctx)
+				}, 1000)
+			}
+			InstallStatus.DOWNLOADING -> {
+				val totalBytes = state.totalBytesToDownload
+				val bytesDownloaded = state.bytesDownloaded
+				val mbDownloaded = bytesDownloaded / BYTES_IN_MB
+				val totalMb = totalBytes / BYTES_IN_MB
+				val percent = (state.bytesDownloaded * 100 / state.totalBytesToDownload).toInt()
+				progressDialog?.update(percent, mbDownloaded, totalMb)
+			}
+			InstallStatus.FAILED -> {
+				progressDialog?.hide()
+				ctx.success(false)
+			}
+			InstallStatus.DOWNLOAD_INTERRUPTED -> {
+				progressDialog?.hide()
+				ctx.success(false)
+			}
+			}
+		}
+	}
+
+	private fun downloadAndInstallUpdate(ctx: CallbackContext) {
+		val updateInfo = lastUpdateInfo
+		if (updateInfo == null) {
+			ctx.success(false)
+			return
+		}
+		if (updateInfo.updateAvailability != UpdateAvailability.UPDATE_AVAILABLE && updateInfo.updateAvailability != UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) {
+			return
+		}
+		if (updateInfo.installStatus == InstallStatus.DOWNLOADED) {
+			installUpdate(ctx)
+			return
+		}
+		registerUpdateListener(ctx)
+		if (updateInfo.installStatus == InstallStatus.DOWNLOADING ||
+		    updateInfo.installStatus == InstallStatus.INSTALLING) {
+			return
+		}
+		updateManager.startUpdateFlow(updateInfo, AppUpdateOptions.Builder().appUpdateType(AppUpdateType.FLEXIBLE).build())
+			.addOnSuccessListener { resultCode ->
+				if (resultCode != Activity.RESULT_OK) {
+					progressDialog?.hide()
+					ctx.success(false)
+				}
+			}
+			.addOnFailureListener {
+				progressDialog?.hide()
+				ctx.success(false)
+			}
+	}
+
 	override fun execute(action: String, args: JSONArray, ctx: CallbackContext): Boolean {
 		when (action) {
 		"checkPurchasesAvailability" -> {
@@ -198,6 +342,12 @@ class RuStorePlugin : CordovaPlugin() {
 		}
 		"requestReview" -> {
 			requestReview(ctx)
+		}
+		"checkUpdateAvailability" -> {
+			checkUpdateAvailability(ctx)
+		}
+		"installUpdate" -> {
+			downloadAndInstallUpdate(ctx)
 		}
 		else -> return false
 		}

@@ -9,4 +9,5 @@ dependencies {
     implementation 'ru.rustore.sdk:core'
     implementation 'ru.rustore.sdk:pay'
     implementation 'ru.rustore.sdk:review'
+    implementation("ru.rustore.sdk:appupdate")
 }

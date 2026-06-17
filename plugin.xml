@@ -38,6 +38,17 @@
 	</config-file>
 
 	<source-file src="src/android/RuStorePlugin.kt" target-dir="app/src/main/kotlin/org/apache/cordova/plugin"/>
+	<source-file src="src/android/ui/ProgressDialog.kt" target-dir="app/src/main/kotlin/org/apache/cordova/plugin/ui"/>
+
+	<resource-file
+		src="src/android/res/layout/progress_dialog.xml"
+		target="res/layout/progress_dialog.xml" />
+	<resource-file
+		src="src/android/res/drawable/progress_dialog_bg.xml"
+		target="res/drawable/progress_dialog_bg.xml" />
+	<resource-file
+		src="src/android/res/drawable/progress_bar_style.xml"
+		target="res/drawable/progress_bar_style.xml" />
 
 	<framework src="src/android/cordovaAF.gradle" custom="true" type="gradleReference"/>
 

@@ -17,6 +17,11 @@ const exec = require("cordova/exec")
 		TWO_STEP: "TWO_STEP",
 		UNDEFINED: "UNDEFINED",
 	}
+	RuStore.prototype.RuStoreUpdateAvailability = {
+		AVAILABLE: "AVAILABLE",
+		UNAVAILABLE: "UNAVAILABLE",
+		IN_PROGRESS: "IN_PROGRESS"
+	}
 	const RUSTORE_PLUGIN_CLASS = "RuStorePlugin"
 
 	function execPromiseAPI(method, ...args) {
@@ -45,6 +50,12 @@ const exec = require("cordova/exec")
 	}
 	RuStore.prototype.requestReview = function () {
 		return execPromiseAPI("requestReview")
+	}
+	RuStore.prototype.checkUpdateAvailability = function() {
+		return execPromiseAPI("checkUpdateAvailability")
+	}
+	RuStore.prototype.installUpdate = function() {
+		return execPromiseAPI("installUpdate")
 	}
 	module.exports = new RuStore()
 })()

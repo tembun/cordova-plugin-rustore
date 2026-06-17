@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="340dp"
+	android:layout_height="wrap_content"
+	android:orientation="vertical"
+	android:padding="28dp"
+	android:background="@drawable/progress_dialog_bg">
+
+<TextView
+	android:id="@+id/titleText"
+	android:layout_width="wrap_content"
+	android:layout_height="wrap_content"
+	android:text="Загрузка обновления"
+	android:textColor="#FFFFFF"
+	android:textSize="20sp"
+	android:textStyle="bold"/>
+
+<TextView
+	android:id="@+id/progressText"
+	android:layout_width="wrap_content"
+	android:layout_height="wrap_content"
+	android:layout_marginTop="24dp"
+	android:text="0%"
+	android:textColor="#C7CCD8"
+	android:textSize="18sp"/>
+
+<ProgressBar
+	android:id="@+id/progressBar"
+	style="?android:attr/progressBarStyleHorizontal"
+	android:layout_width="match_parent"
+	android:layout_height="6dp"
+	android:layout_marginTop="8dp"
+	android:max="100"
+	android:progress="0"
+	android:progressDrawable="@drawable/progress_bar_style"/>
+
+<TextView
+	android:id="@+id/sizeText"
+	android:layout_width="wrap_content"
+	android:layout_height="wrap_content"
+	android:layout_marginTop="16dp"
+	android:text="0 МБ из 0 МБ"
+	android:textColor="#7F8797"
+	android:textSize="15sp"/>
+
+</LinearLayout>
